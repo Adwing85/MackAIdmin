@@ -1,0 +1,26 @@
+{
+  "name": "@mackaidmin/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "start": "node --disable-warning=ExperimentalWarning dist/index.js",
+    "test": "node --import tsx --test --test-reporter=spec \"test/**/*.test.ts\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "seed:demo": "tsx src/db/seed-cli.ts"
+  },
+  "dependencies": {
+    "express": "5.1.0",
+    "helmet": "8.1.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.3",
+    "@types/node": "22.15.30",
+    "tsx": "4.20.3",
+    "typescript": "5.8.3"
+  }
+}
