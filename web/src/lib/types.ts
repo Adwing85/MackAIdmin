@@ -26,6 +26,8 @@ export interface Me {
   roles: string[];
   teamId: number | null;
   ssoProxy: boolean;
+  entraLinked: boolean;
+  hasPassword: boolean;
 }
 
 export interface AssetSummary {
@@ -185,6 +187,7 @@ export interface Person {
   active: boolean;
   lastLoginAt: string | null;
   hasPassword: boolean;
+  entraLinked: boolean;
 }
 
 export interface Team {

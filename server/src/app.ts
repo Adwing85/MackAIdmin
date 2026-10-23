@@ -1,7 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import helmet from "helmet";
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import type { Config } from "./config.js";
 import type { DB } from "./db/database.js";
 import { authenticate } from "./auth/auth.js";
@@ -65,10 +65,12 @@ export function createApp(db: DB, config: Config) {
   api.use((_req, _res, next) => next(new HttpError(404, "Endpunkt nicht gefunden.")));
   app.use("/api", api);
 
-  if (config.staticDir && existsSync(config.staticDir)) {
-    app.use(express.static(config.staticDir, { index: false, maxAge: "1h" }));
+  // Resolve once: a relative STATIC_DIR would otherwise make res.sendFile throw.
+  const staticDir = config.staticDir ? resolve(config.staticDir) : null;
+  if (staticDir && existsSync(staticDir)) {
+    app.use(express.static(staticDir, { index: false, maxAge: "1h" }));
     app.get(/^(?!\/api\/).*/, (_req, res) => {
-      res.sendFile(join(config.staticDir!, "index.html"));
+      res.sendFile(join(staticDir, "index.html"));
     });
   }
 

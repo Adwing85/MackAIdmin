@@ -106,7 +106,7 @@ function toUser(row: PersonRow): CurrentUser {
   };
 }
 
-function readCookie(req: Request, name: string): string | null {
+export function readCookie(req: Request, name: string): string | null {
   const header = req.headers.cookie;
   if (!header) return null;
   for (const part of header.split(";")) {

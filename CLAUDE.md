@@ -15,6 +15,7 @@ Governance-Plattform für Claude Code, KI-Agenten, Apps und MCP-Server. UI-Texte
 
 - `server/src/domain/` – reine Fachlogik ohne I/O (Risiko, Befundregeln, Freigabematrix, Redundanz, Kosten, Policy-Generator). Neue Regeln in `findings.ts` ergänzen und testen.
 - `server/src/services/` – Datenbankzugriff und Workflows; `evaluateInventory()` berechnet Befunde immer aus aktuellen Daten.
+- `server/src/auth/` – Sessions, Rollenprüfung, API-Tokens; `entra.ts` = Entra-ID-Login (OIDC über `openid-client`), Tests gegen einen lokalen Fake-IdP in `test/entra.test.ts`.
 - `server/src/routes/` – REST-API, Validierung mit zod, Rechte über `requireRole`/`requireUserOrScope`, jede Änderung mit `audit()`.
 - `server/src/db/migrations/` – SQL-Migrationen, fortlaufend nummeriert; nie bestehende Dateien ändern.
 - `web/src/pages/` – eine Datei pro Seite; Labels kommen aus `/api/meta` (`server/src/domain/catalog.ts`).

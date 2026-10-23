@@ -364,9 +364,15 @@ export function adminRouter(db: DB): Router {
       all<Record<string, unknown>>(
         db,
         `SELECT p.id, p.email, p.name, p.roles, p.team_id AS teamId, t.name AS teamName, p.active, p.last_login_at AS lastLoginAt,
-           (p.password_hash IS NOT NULL) AS hasPassword
+           (p.password_hash IS NOT NULL) AS hasPassword, (p.external_id IS NOT NULL) AS entraLinked
          FROM people p LEFT JOIN teams t ON t.id = p.team_id ORDER BY p.name COLLATE NOCASE`,
-      ).map((p) => ({ ...p, roles: parseJson(p.roles, []), active: !!p.active, hasPassword: !!p.hasPassword })),
+      ).map((p) => ({
+        ...p,
+        roles: parseJson(p.roles, []),
+        active: !!p.active,
+        hasPassword: !!p.hasPassword,
+        entraLinked: !!p.entraLinked,
+      })),
     );
   });
 

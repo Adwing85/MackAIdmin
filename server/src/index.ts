@@ -32,6 +32,15 @@ if (!hasPeople) {
   }
 }
 
+if (config.entra) {
+  console.log(`Entra-ID-Anmeldung aktiv (Mandant ${config.entra.tenantId}, Redirect ${config.entra.redirectUri}).`);
+}
+if (!config.localLoginEnabled) {
+  if (!config.entra)
+    throw new Error("LOCAL_LOGIN=false ist nur zusammen mit Entra ID möglich – sonst kann sich niemand anmelden.");
+  console.log("Passwort-Anmeldung deaktiviert. Admin-Rechte über die Entra-App-Rolle „admin“ vergeben.");
+}
+
 const app = createApp(db, config);
 app.listen(config.port, () => {
   console.log(`MackAIdmin läuft auf http://localhost:${config.port}`);

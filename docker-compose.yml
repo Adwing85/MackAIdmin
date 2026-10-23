@@ -16,6 +16,13 @@ services:
       COOKIE_SECURE: ${COOKIE_SECURE:-true}
       # Optional: Claude-Console-Admin-Key für den Sync der Claude-Code-Nutzung
       ANTHROPIC_ADMIN_KEY: ${ANTHROPIC_ADMIN_KEY:-}
+      # Optional: Anmeldung mit Microsoft Entra ID (siehe README)
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      ENTRA_TENANT_ID: ${ENTRA_TENANT_ID:-}
+      ENTRA_CLIENT_ID: ${ENTRA_CLIENT_ID:-}
+      ENTRA_CLIENT_SECRET: ${ENTRA_CLIENT_SECRET:-}
+      ENTRA_DEFAULT_ROLES: ${ENTRA_DEFAULT_ROLES:-viewer}
+      LOCAL_LOGIN: ${LOCAL_LOGIN:-true}
       # Optional: SSO über vorgeschalteten Proxy (z. B. oauth2-proxy)
       AUTH_PROXY_HEADER: ${AUTH_PROXY_HEADER:-}
     restart: unless-stopped

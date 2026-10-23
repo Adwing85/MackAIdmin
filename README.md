@@ -55,9 +55,34 @@ Die Datenbank (SQLite, WAL-Modus) liegt im Volume `/data`. Für Backups genügt 
 | `SEED_DEMO` | Demo-Daten bei leerer Datenbank einspielen | `false` |
 | `COOKIE_SECURE` | Session-Cookie nur über HTTPS, HSTS aktiv | `true` bei `NODE_ENV=production` |
 | `SESSION_TTL_HOURS` | Gültigkeit einer Anmeldung | `12` |
+| `PUBLIC_URL` | Öffentliche Adresse, z. B. `https://mackaidmin.firma.de` (für den Entra-Redirect) | – |
+| `ENTRA_TENANT_ID`, `ENTRA_CLIENT_ID`, `ENTRA_CLIENT_SECRET` | Anmeldung mit Microsoft Entra ID, siehe unten | – |
+| `ENTRA_DEFAULT_ROLES` | Rollen für neue Personen ohne zugewiesene App-Rolle (kommagetrennt) | `viewer` |
+| `ENTRA_AUTO_PROVISION` | Personen bei der ersten Entra-Anmeldung automatisch anlegen | `true` |
+| `ENTRA_REDIRECT_URI`, `ENTRA_AUTHORITY` | Nur bei Abweichungen: Redirect-URI bzw. Issuer (z. B. andere Microsoft-Cloud) | aus `PUBLIC_URL` bzw. `login.microsoftonline.com` |
+| `LOCAL_LOGIN` | Passwort-Anmeldung erlauben; `false` = nur noch Entra ID | `true` |
 | `AUTH_PROXY_HEADER` | SSO über vorgeschalteten Proxy (z. B. `x-forwarded-email` von oauth2-proxy). **Nur setzen, wenn die App ausschließlich über den Proxy erreichbar ist.** | – |
 | `ANTHROPIC_ADMIN_KEY` | Admin-API-Key der Claude Console (`sk-ant-admin…`) für den Claude-Code-Sync | – |
 | `STATIC_DIR` | Verzeichnis der gebauten Web-UI | `web/dist` |
+
+### Anmeldung mit Microsoft Entra ID
+
+MackAIdmin meldet Personen per OpenID Connect (Authorization Code Flow mit PKCE) über Entra ID an. Einrichtung im [Microsoft Entra Admin Center](https://entra.microsoft.com):
+
+1. **App-Registrierung** anlegen: Name „MackAIdmin“, Kontotyp **„Nur Konten in diesem Organisationsverzeichnis“** (Single Tenant), Umleitungs-URI Plattform **Web**: `https://<ihre-adresse>/api/auth/entra/callback`.
+2. Unter **Zertifikate & Geheimnisse** einen geheimen Clientschlüssel erstellen (Ablaufdatum notieren und rechtzeitig erneuern).
+3. Unter **App-Rollen** die Rollen anlegen, die MackAIdmin kennt – der **Wert** muss exakt einer dieser Bezeichnungen entsprechen: `admin`, `team_lead`, `architecture`, `security`, `privacy`, `finance`, `developer`, `viewer` (zulässige Mitgliedstypen: Benutzer/Gruppen).
+4. In **Unternehmensanwendungen → MackAIdmin**: unter **Eigenschaften** „Zuweisung erforderlich“ auf **Ja** setzen und unter **Benutzer und Gruppen** die Rollen an Personen oder Gruppen vergeben (Gruppenzuweisung erfordert Entra ID P1).
+5. Optional unter **Tokenkonfiguration** den optionalen Claim `email` für das ID-Token hinzufügen (sonst wird der Benutzerprinzipalname verwendet).
+6. Umgebungsvariablen setzen: `ENTRA_TENANT_ID` (Verzeichnis-ID, GUID), `ENTRA_CLIENT_ID` (Anwendungs-ID), `ENTRA_CLIENT_SECRET`, `PUBLIC_URL`.
+
+Verhalten:
+
+- Personen werden über ihre unveränderliche Entra-Objekt-ID erkannt. Bei der ersten Anmeldung wird ein bestehendes MackAIdmin-Konto mit derselben E-Mail-Adresse verknüpft, sonst wird die Person angelegt (abschaltbar mit `ENTRA_AUTO_PROVISION=false`).
+- **Sind App-Rollen zugewiesen, sind sie maßgeblich** und werden bei jeder Anmeldung übernommen – Rollenänderungen erfolgen dann in Entra ID. Ohne App-Rolle behalten bestehende Personen ihre Rollen; neue erhalten `ENTRA_DEFAULT_ROLES`.
+- Nur Konten des konfigurierten Mandanten werden akzeptiert; in MackAIdmin deaktivierte Personen können sich auch per Entra ID nicht anmelden.
+- Lokale Passwörter bleiben als Notfallzugang erhalten. Mit `LOCAL_LOGIN=false` ist nur noch die Entra-Anmeldung möglich – vorher sicherstellen, dass mindestens eine Person die App-Rolle `admin` hat.
+- „Abmelden“ beendet die MackAIdmin-Sitzung; die Microsoft-Sitzung bleibt bestehen. Bei der nächsten Anmeldung erscheint die Kontoauswahl.
 
 ## Module
 
@@ -148,11 +173,11 @@ npm run build
 
 Die GitHub-Actions-Pipeline (`.github/workflows/ci.yml`) prüft jeden Pull Request: `npm audit`, Formatierung, Typecheck, Tests, Build, Scanner-Selbsttest sowie Bau und Smoke-Test des Docker-Images.
 
-Sicherheit: Passwörter mit scrypt, Sessions serverseitig (HttpOnly, SameSite=Lax), CSRF-Schutz über JSON-Pflicht für schreibende Requests, Login-Drosselung, strikte CSP und Security-Header (helmet), API-Tokens nur gehasht gespeichert und mit minimalen Scopes, Eingabevalidierung mit zod, vollständiges Audit-Log.
+Sicherheit: Anmeldung per Microsoft Entra ID (OIDC mit PKCE, state und nonce, Mandantenbindung) oder Passwort (scrypt), Sessions serverseitig (HttpOnly, SameSite=Lax), CSRF-Schutz über JSON-Pflicht für schreibende Requests, Login-Drosselung, strikte CSP und Security-Header (helmet), API-Tokens nur gehasht gespeichert und mit minimalen Scopes, Eingabevalidierung mit zod, vollständiges Audit-Log.
 
 ## Roadmap-Ideen
 
-- OIDC-Login direkt (Entra ID, Okta) und SCIM-Provisioning
+- SCIM-Provisioning (automatisches Deaktivieren ausgeschiedener Personen) und weitere OIDC-Anbieter
 - OpenTelemetry-Empfänger für Claude-Code-Metriken in Echtzeit
 - Import der Claude Enterprise Analytics API
 - Benachrichtigungen (E-Mail/Teams/Slack) bei neuen Befunden, Budgetwarnungen und offenen Freigaben

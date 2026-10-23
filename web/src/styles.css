@@ -991,6 +991,24 @@ th.num {
 .login-card {
   width: min(400px, 100%);
 }
+.btn-sso {
+  height: 40px;
+  gap: 10px;
+  font-weight: 600;
+}
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--border);
+}
 
 /* --- responsive ----------------------------------------------------------------- */
 @media (max-width: 1100px) {

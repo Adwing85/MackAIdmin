@@ -75,7 +75,8 @@ function PeopleTab() {
               <tr key={p.id}>
                 <td>
                   <div className="cell-title">
-                    {p.name} {!p.active && <Badge dot="muted">deaktiviert</Badge>}
+                    {p.name} {!p.active && <Badge dot="muted">deaktiviert</Badge>}{" "}
+                    {p.entraLinked && <Badge dot="accent">Entra ID</Badge>}
                   </div>
                   <div className="cell-sub">{p.email}</div>
                 </td>
@@ -184,6 +185,12 @@ function PersonModal({
           <div className="field-label" style={{ marginBottom: 6 }}>
             Rollen
           </div>
+          {person?.entraLinked && (
+            <p className="small muted" style={{ marginTop: 0 }}>
+              Mit Entra ID verknüpft: Sind der Person App-Rollen zugewiesen, werden die Rollen bei jeder Anmeldung daraus
+              übernommen und Änderungen hier überschrieben.
+            </p>
+          )}
           <div className="grid grid-2" style={{ gap: 6 }}>
             {Object.entries(meta.roles).map(([k, v]) => (
               <label key={k} className="check">

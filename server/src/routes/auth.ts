@@ -8,6 +8,7 @@ import {
   createSession,
   destroySession,
   hashPassword,
+  readCookie,
   recordLoginFailure,
   requireUser,
   sessionCookie,
@@ -16,6 +17,7 @@ import {
 } from "../auth/auth.js";
 import { HttpError, parse } from "../lib/http.js";
 import { audit } from "../services/audit.js";
+import { beginLogin, completeLogin, EntraLoginError, OIDC_STATE_COOKIE, resolvePerson, safeReturnTo } from "../auth/entra.js";
 
 // Verifying against a dummy hash keeps response times equal for unknown e-mail addresses.
 const DUMMY_HASH = hashPassword("dummy-password-for-timing");
@@ -23,7 +25,15 @@ const DUMMY_HASH = hashPassword("dummy-password-for-timing");
 export function authRouter(db: DB, config: Config): Router {
   const r = Router();
 
+  /** Public: tells the login page which sign-in methods exist. */
+  r.get("/auth/config", (_req, res) => {
+    res.json({ localLogin: config.localLoginEnabled, entra: config.entra ? { label: "Mit Microsoft anmelden" } : null });
+  });
+
   r.post("/auth/login", (req, res) => {
+    if (!config.localLoginEnabled) {
+      throw new HttpError(403, "Die Anmeldung per Passwort ist deaktiviert. Bitte mit Microsoft anmelden.");
+    }
     const body = parse(
       z.object({ email: z.string().trim().toLowerCase().email(), password: z.string().min(1).max(200) }),
       req.body,
@@ -66,7 +76,76 @@ export function authRouter(db: DB, config: Config): Router {
 
   r.get("/auth/me", (req, res) => {
     const user = requireUser(req);
-    res.json({ ...user, ssoProxy: !!config.authProxyHeader });
+    const row = get<{ external_id: string | null; has_password: number }>(
+      db,
+      "SELECT external_id, password_hash IS NOT NULL AS has_password FROM people WHERE id = :id",
+      { id: user.id },
+    );
+    res.json({
+      ...user,
+      ssoProxy: !!config.authProxyHeader,
+      entraLinked: !!row?.external_id,
+      hasPassword: !!row?.has_password,
+    });
+  });
+
+  // --- Microsoft Entra ID (OIDC) ---------------------------------------------------
+
+  const stateCookie = (value: string, maxAge: number) =>
+    [
+      `${OIDC_STATE_COOKIE}=${encodeURIComponent(value)}`,
+      "Path=/api/auth/entra",
+      "HttpOnly",
+      "SameSite=Lax",
+      `Max-Age=${maxAge}`,
+      ...(config.cookieSecure ? ["Secure"] : []),
+    ].join("; ");
+
+  r.get("/auth/entra/login", async (req, res) => {
+    if (!config.entra) throw new HttpError(404, "Entra ID ist nicht konfiguriert.");
+    try {
+      const { url, state } = await beginLogin(db, config.entra, safeReturnTo(req.query.returnTo));
+      res.setHeader("Set-Cookie", stateCookie(state, 600));
+      res.redirect(302, url);
+    } catch (err) {
+      // Typically the tenant's discovery document is unreachable – show it on the login page, not as JSON.
+      console.error("Entra-ID-Anmeldung konnte nicht gestartet werden:", err);
+      res.redirect(302, `/?loginError=${encodeURIComponent("Die Microsoft-Anmeldung ist derzeit nicht erreichbar.")}`);
+    }
+  });
+
+  r.get("/auth/entra/callback", async (req, res) => {
+    if (!config.entra) throw new HttpError(404, "Entra ID ist nicht konfiguriert.");
+    const query = req.originalUrl.includes("?") ? req.originalUrl.slice(req.originalUrl.indexOf("?") + 1) : "";
+    const cookies: string[] = [stateCookie("", 0)];
+    try {
+      const { identity, returnTo } = await completeLogin(db, config.entra, query, readCookie(req, OIDC_STATE_COOKIE));
+      const person = resolvePerson(db, config.entra, identity);
+      const token = createSession(db, person.id, config.sessionTtlHours);
+      audit(
+        db,
+        { kind: "user", id: person.id, email: person.email, name: person.name, roles: [], teamId: null },
+        {
+          action: "auth.login",
+          entityType: "person",
+          entityId: person.id,
+          summary: `${person.name} hat sich über Entra ID angemeldet`,
+        },
+      );
+      cookies.push(sessionCookie(token, config, config.sessionTtlHours * 3600));
+      res.setHeader("Set-Cookie", cookies);
+      res.redirect(302, returnTo);
+    } catch (err) {
+      const message = err instanceof EntraLoginError ? err.message : "Die Anmeldung über Microsoft ist fehlgeschlagen.";
+      if (!(err instanceof EntraLoginError)) console.error("Entra-ID-Anmeldung fehlgeschlagen:", err);
+      audit(db, undefined, {
+        action: "auth.login_failed",
+        entityType: "person",
+        summary: `Entra-ID-Anmeldung abgelehnt: ${message}`,
+      });
+      res.setHeader("Set-Cookie", cookies);
+      res.redirect(302, `/?loginError=${encodeURIComponent(message)}`);
+    }
   });
 
   r.post("/auth/password", (req, res) => {

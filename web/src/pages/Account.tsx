@@ -33,9 +33,14 @@ export function AccountPage() {
             <dd>{me.email}</dd>
             <dt>Rollen</dt>
             <dd>{me.roles.map((r) => meta.roles[r] ?? r).join(", ")}</dd>
+            <dt>Anmeldung</dt>
+            <dd>
+              {me.entraLinked ? "Microsoft Entra ID" : me.ssoProxy ? "Single Sign-on (Proxy)" : "Passwort"}
+              {me.entraLinked && me.hasPassword && <div className="cell-sub">zusätzlich lokales Passwort (Notfallzugang)</div>}
+            </dd>
           </dl>
         </Card>
-        {!me.ssoProxy && (
+        {!me.ssoProxy && me.hasPassword && (
           <Card title="Passwort ändern">
             <form className="stack" onSubmit={submit}>
               <Field label="Aktuelles Passwort">

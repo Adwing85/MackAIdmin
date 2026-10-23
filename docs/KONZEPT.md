@@ -24,6 +24,8 @@ Drei Mechanismen sorgen dafür, dass Registrierung nicht nur ein Appell bleibt:
 | **Finanzen / Controlling** | Budgets, Modellpreise, Lizenzbestand, Kostenzuordnung zu Kostenstellen |
 | **KI-Governance-Board** (z. B. monatlich) | Kennzahlen, Redundanz-Entscheidungen, Richtlinien, Ausnahmen |
 
+Die Rollen werden idealerweise zentral als **App-Rollen in Microsoft Entra ID** vergeben (an Personen oder Gruppen). MackAIdmin übernimmt sie bei jeder Anmeldung; damit gelten Ein- und Austrittsprozesse automatisch auch für die KI-Governance.
+
 ## 3. Lebenszyklus eines Assets
 
 ```
