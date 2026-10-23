@@ -28,10 +28,19 @@ describe("shadow-AI scanner", () => {
         JSON.stringify({ mcpServers: { db: { command: "npx", args: ["-y", "pg-mcp"], env: { PGPASSWORD: "top-secret" } } } }),
       );
       writeFileSync(join(repo, "requirements.txt"), "anthropic>=1.0\n");
+      mkdirSync(join(repo, "src"));
+      writeFileSync(join(repo, "src", "agent.ts"), 'import { query } from "@anthropic-ai/claude-agent-sdk";\n');
+      // Mentions in comments or strings are not usage.
+      writeFileSync(
+        join(repo, "src", "notes.py"),
+        '# TODO: evaluate claude_agent_sdk and "@anthropic-ai/sdk"\nprint("anthropic")\n',
+      );
 
       const findings = scanRepo(repo);
       const kinds = findings.map((f) => f.kind).sort();
-      assert.deepEqual(kinds, ["anthropic_sdk", "claude_md", "claude_settings", "mcp_config"]);
+      assert.deepEqual(kinds, ["agent_sdk", "anthropic_sdk", "claude_md", "claude_settings", "mcp_config"]);
+      assert.deepEqual(findings.find((f) => f.kind === "agent_sdk")?.details.paths, ["src/agent.ts"]);
+      assert.deepEqual(findings.find((f) => f.kind === "anthropic_sdk")?.details.paths, ["requirements.txt"]);
       assert.ok(findings.every((f) => f.repoUrl === "https://git.example.com/team/app.git"));
       assert.equal(findings.find((f) => f.kind === "claude_settings")?.details.bypassPermissions, true);
       const serialized = JSON.stringify(findings);

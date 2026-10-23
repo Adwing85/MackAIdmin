@@ -177,16 +177,38 @@ function mcpServers(json) {
   }));
 }
 
+// Manifests are matched on dependency declarations, source files only on import statements at the
+// start of a line (or require()/import() calls) – a comment or string that merely mentions an SDK,
+// like this scanner's own source or a test fixture, is not usage.
+const jsImport = (pkg) =>
+  String.raw`^\s*(?:import|export)\s[^\n]*?["']${pkg}(?:/[^"'\s]*)?["']|\b(?:require|import)\(\s*["']${pkg}(?:/[^"'\s]*)?["']`;
 const SDK_PATTERNS = [
   {
     kind: "agent_sdk",
     pkg: "@anthropic-ai/claude-agent-sdk",
-    re: /@anthropic-ai\/claude-agent-sdk|@anthropic-ai\/claude-code|claude_agent_sdk|claude_code_sdk/,
+    manifest: /["']@anthropic-ai\/(?:claude-agent-sdk|claude-code)["']|(?:^|["'\s])claude[-_](?:agent|code)[-_]sdk\b/m,
+    source: new RegExp(
+      [
+        jsImport("@anthropic-ai/(?:claude-agent-sdk|claude-code)"),
+        String.raw`^\s*(?:from|import)\s+claude_(?:agent|code)_sdk\b`,
+      ].join("|"),
+      "m",
+    ),
   },
   {
     kind: "anthropic_sdk",
     pkg: "anthropic",
-    re: /@anthropic-ai\/sdk|^\s*(from|import)\s+anthropic\b|github\.com\/anthropics\/anthropic-sdk-go|com\.anthropic[.:]|Anthropic\.SDK|anthropic-sdk-ruby|anthropic-ai\/sdk-php/m,
+    manifest:
+      /["']@anthropic-ai\/sdk["']|(?:^|["'\s])anthropic(?:\[[\w,]+\])?\s*(?:[=<>~!;"']|$)|github\.com\/anthropics\/anthropic-sdk-go|com\.anthropic|["']anthropic-ai\/sdk["']|Include="Anthropic/m,
+    source: new RegExp(
+      [
+        jsImport("@anthropic-ai/sdk"),
+        String.raw`^\s*(?:from|import)\s+anthropic\b`,
+        String.raw`^\s*(?:import\s+)?(?:\w+\s+)?"github\.com/anthropics/anthropic-sdk-go`,
+        String.raw`^\s*import\s+com\.anthropic\.`,
+      ].join("|"),
+      "m",
+    ),
   },
 ];
 
@@ -253,10 +275,7 @@ export function scanRepo(repo) {
     const text = readText(join(repo, f));
     if (!text) continue;
     for (const p of SDK_PATTERNS) {
-      if (
-        p.re.test(text) ||
-        (isManifest && p.kind === "anthropic_sdk" && /(^|["'\s])anthropic(\[[\w,]+\])?\s*([=<>~!;"']|$)/m.test(text))
-      ) {
+      if ((isManifest ? p.manifest : p.source).test(text)) {
         note(p.kind, p.pkg, f);
         break;
       }

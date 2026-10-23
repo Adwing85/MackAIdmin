@@ -17,9 +17,12 @@
     "test": "npm run test -w server",
     "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
     "seed:demo": "npm run seed:demo -w server",
-    "scan": "node scripts/mackaidmin-scan.mjs"
+    "scan": "node scripts/mackaidmin-scan.mjs",
+    "format": "prettier --write \"server/src/**/*.ts\" \"server/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
+    "format:check": "prettier --check \"server/src/**/*.ts\" \"server/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\""
   },
   "devDependencies": {
-    "concurrently": "9.2.0"
+    "concurrently": "9.2.0",
+    "prettier": "3.8.1"
   }
 }

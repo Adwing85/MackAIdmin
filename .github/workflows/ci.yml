@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Typecheck, Tests, Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Sicherheitslücken in Abhängigkeiten
+        run: npm audit --audit-level=high
+
+      - name: Formatierung
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+      - name: Scanner-Selbsttest
+        run: node scripts/mackaidmin-scan.mjs . --dry-run
+
+  docker:
+    name: Docker-Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image bauen
+        run: docker build -t mackaidmin:ci .
+
+      - name: Container-Smoke-Test
+        run: |
+          docker run -d --name mackaidmin -p 8080:8080 \
+            -e ADMIN_PASSWORD=ci-passwort-123 -e COOKIE_SECURE=false mackaidmin:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/api/health; then
+              curl -fsS -o /dev/null http://localhost:8080/ && echo " – UI erreichbar" && exit 0
+            fi
+            sleep 1
+          done
+          docker logs mackaidmin
+          exit 1

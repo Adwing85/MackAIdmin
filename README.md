@@ -142,8 +142,11 @@ docs/     Governance-Konzept
 ```bash
 npm test            # Unit- und API-Tests (node:test)
 npm run typecheck   # Server und Web
+npm run format      # Prettier
 npm run build
 ```
+
+Die GitHub-Actions-Pipeline (`.github/workflows/ci.yml`) prüft jeden Pull Request: `npm audit`, Formatierung, Typecheck, Tests, Build, Scanner-Selbsttest sowie Bau und Smoke-Test des Docker-Images.
 
 Sicherheit: Passwörter mit scrypt, Sessions serverseitig (HttpOnly, SameSite=Lax), CSRF-Schutz über JSON-Pflicht für schreibende Requests, Login-Drosselung, strikte CSP und Security-Header (helmet), API-Tokens nur gehasht gespeichert und mit minimalen Scopes, Eingabevalidierung mit zod, vollständiges Audit-Log.
 
