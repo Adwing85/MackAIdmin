@@ -1,0 +1,28 @@
+{
+  "name": "mackaidmin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MackAIdmin – Governance-Plattform für Claude Code, KI-Agenten, Apps und MCP-Server",
+  "workspaces": [
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "dev": "concurrently -n server,web -c blue,magenta \"npm run dev -w server\" \"npm run dev -w web\"",
+    "build": "npm run build -w web && npm run build -w server",
+    "start": "npm run start -w server",
+    "test": "npm run test -w server",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
+    "seed:demo": "npm run seed:demo -w server",
+    "scan": "node scripts/mackaidmin-scan.mjs",
+    "format": "prettier --write \"server/src/**/*.ts\" \"server/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\"",
+    "format:check": "prettier --check \"server/src/**/*.ts\" \"server/test/**/*.ts\" \"web/src/**/*.{ts,tsx,css}\" \"scripts/*.mjs\""
+  },
+  "devDependencies": {
+    "concurrently": "9.2.0",
+    "prettier": "3.8.1"
+  }
+}

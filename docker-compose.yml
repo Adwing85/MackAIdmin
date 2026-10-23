@@ -1,0 +1,24 @@
+services:
+  mackaidmin:
+    build: .
+    image: mackaidmin:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - mackaidmin-data:/data
+    environment:
+      # Erster Admin – wird nur angelegt, solange die Datenbank leer ist.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD setzen}
+      # Demo-Daten statt leerer Datenbank (nur zum Ausprobieren)
+      SEED_DEMO: ${SEED_DEMO:-false}
+      # Hinter einem TLS-terminierenden Reverse Proxy true lassen, für lokale Tests ohne HTTPS false.
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      # Optional: Claude-Console-Admin-Key für den Sync der Claude-Code-Nutzung
+      ANTHROPIC_ADMIN_KEY: ${ANTHROPIC_ADMIN_KEY:-}
+      # Optional: SSO über vorgeschalteten Proxy (z. B. oauth2-proxy)
+      AUTH_PROXY_HEADER: ${AUTH_PROXY_HEADER:-}
+    restart: unless-stopped
+
+volumes:
+  mackaidmin-data:
